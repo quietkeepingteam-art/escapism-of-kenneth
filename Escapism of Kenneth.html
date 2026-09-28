@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Escapism of Kenneth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#14171b; --panel-2:#181c21; --line:#242a30;
+    --text:#dfe5e9; --muted:#8b98a2; --dim:#5a656d;
+    --escaper:#4fd1c5; --escaper-glow:rgba(79,209,197,.35);
+    --blocker:#e0594a; --blocker-glow:rgba(224,89,74,.30);
+    --safe:#7fb069; --safe-glow:rgba(127,176,105,.22);
+    --wall:#33383e; --accent:#e8b339;
+    --font-display:'Space Grotesk',system-ui,sans-serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;
+    box-sizing:border-box;
+    padding-top:env(safe-area-inset-top,0px);
+    padding-bottom:env(safe-area-inset-bottom,0px);
+  }
+  :root[data-theme="light"]{
+    --bg:#eef0ef; --panel:#ffffff; --panel-2:#f5f6f5; --line:#dadfde;
+    --text:#1c2226; --muted:#5b6570; --dim:#93a0a8; --wall:#c7cdd1;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-padding-top:env(safe-area-inset-top,0px);}
+  html,body{height:100%;}
+  body{margin:0; background:var(--bg); color:var(--text); font-family:var(--font-mono); -webkit-font-smoothing:antialiased;}
+  .app{max-width:1180px; margin:0 auto; padding:28px 20px 48px;}
+  header{margin-bottom:22px;}
+  header h1{font-family:var(--font-display); font-weight:700; font-size:clamp(1.6rem,4vw,2.3rem); margin:0 0 8px; letter-spacing:-0.01em;}
+  header p{margin:0; max-width:64ch; color:var(--muted); font-size:.95rem; line-height:1.55;}
+  main{display:grid; grid-template-columns:1fr 340px; gap:18px;}
+  @media (max-width:880px){ main{grid-template-columns:1fr;} }
+
+  .stage{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px; position:relative; overflow:hidden;}
+  #sim{width:100%; aspect-ratio:900/560; display:block; border-radius:6px; background:var(--panel-2);}
+  .caption{display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-top:10px; padding:0 4px; font-size:.78rem; color:var(--dim);}
+  .legend{display:flex; gap:16px; flex-wrap:wrap;}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+  #statusline{color:var(--escaper);}
+
+  .panel{display:flex; flex-direction:column; gap:14px;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px 18px;}
+  .card h2{font-family:var(--font-display); font-size:.92rem; font-weight:600; margin:0 0 12px; color:var(--text);}
+
+  .genome-row{margin-bottom:11px;}
+  .genome-row:last-child{margin-bottom:0;}
+  .genome-label{display:flex; justify-content:space-between; font-size:.76rem; color:var(--muted); margin-bottom:4px;}
+  .genome-label b{color:var(--text); font-weight:500;}
+  .genomebar{height:5px; background:var(--line); border-radius:3px; overflow:hidden;}
+  .genomebar i{display:block; height:100%; background:var(--escaper); border-radius:3px; transition:width .3s ease;}
+
+  .btnrow{display:flex; gap:8px; margin-top:14px;}
+  button{font-family:var(--font-mono); font-size:.78rem; font-weight:500; letter-spacing:.02em; padding:9px 12px; border-radius:7px; border:1px solid var(--line); background:var(--panel-2); color:var(--text); cursor:pointer; flex:1;}
+  button:hover{border-color:var(--dim);}
+  button.primary{background:var(--escaper); color:#04211f; border-color:var(--escaper);}
+  button:focus-visible, input:focus-visible{outline:2px solid var(--escaper); outline-offset:2px;}
+
+  .stats{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .stat{background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:10px 12px;}
+  .stat .n{font-size:1.2rem; font-weight:600; color:var(--text); font-family:var(--font-display);}
+  .stat .l{font-size:.66rem; color:var(--dim); margin-top:2px;}
+
+  .results p{font-size:.82rem; line-height:1.6; color:var(--muted); margin:0 0 10px;}
+  .results p:last-child{margin-bottom:0;}
+  .rank{display:flex; align-items:center; gap:10px; margin-bottom:8px; font-size:.8rem;}
+  .rank .rn{width:16px; color:var(--dim); text-align:right;}
+  .rank .rl{flex:1; color:var(--text);}
+  .rank .rv{color:var(--escaper); font-weight:600;}
+  .placeholder{color:var(--dim); font-size:.8rem; line-height:1.6;}
+
+  .analysis p{font-size:.82rem; line-height:1.6; color:var(--muted); margin:0 0 10px;}
+  .traitlist{display:flex; flex-direction:column; gap:9px;}
+  .trait{border-left:2px solid var(--line); padding-left:10px;}
+  .trait b{display:block; font-size:.78rem; color:var(--text); font-family:var(--font-display); font-weight:600;}
+  .trait span{font-size:.76rem; color:var(--muted); line-height:1.5;}
+
+  @media (prefers-reduced-motion: reduce){ * { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Escapism of Kenneth</h1>
+    <p>One autonomous entity, one long journey: five patrolled gates plus the final wall, all of it shifting on its own. He picks his own traits, runs the gauntlet, gets caught back to the start when he's finally worn down, and tries again with what he's learned. Let it run, then stop it to see what actually got him through.</p>
+  </header>
+
+  <main>
+    <section class="stage">
+      <canvas id="sim"></canvas>
+      <div class="caption">
+        <div class="legend">
+          <span><i class="dot" style="background:var(--escaper)"></i>escaper</span>
+          <span><i class="dot" style="background:var(--blocker)"></i>patrol</span>
+          <span><i class="dot" style="background:var(--safe)"></i>safe zone</span>
+          <span><i class="dot" style="background:var(--wall)"></i>gate / shifting wall</span>
+        </div>
+        <div id="statusline">idle</div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="card">
+        <h2>Current attempt</h2>
+        <div class="genome-row"><div class="genome-label"><span>Speed</span><b id="gvSpeed">–</b></div><div class="genomebar"><i id="gbSpeed" style="width:0%"></i></div></div>
+        <div class="genome-row"><div class="genome-label"><span>Awareness</span><b id="gvVision">–</b></div><div class="genomebar"><i id="gbVision" style="width:0%"></i></div></div>
+        <div class="genome-row"><div class="genome-label"><span>Unpredictability</span><b id="gvChaos">–</b></div><div class="genomebar"><i id="gbChaos" style="width:0%"></i></div></div>
+        <div class="genome-row"><div class="genome-label"><span>Adaptability</span><b id="gvAdapt">–</b></div><div class="genomebar"><i id="gbAdapt" style="width:0%"></i></div></div>
+        <div class="genome-row"><div class="genome-label"><span>Stealth</span><b id="gvStealth">–</b></div><div class="genomebar"><i id="gbStealth" style="width:0%"></i></div></div>
+        <div class="genome-row"><div class="genome-label"><span>Resolve</span><b id="gvResolve">–</b></div><div class="genomebar"><i id="gbResolve" style="width:0%"></i></div></div>
+        <div class="genome-row"><div class="genome-label"><span>Concentration</span><b id="gvConcen">–</b></div><div class="genomebar"><i id="gbConcen" style="width:0%"></i></div></div>
+        <div class="genome-row"><div class="genome-label"><span>Self-control</span><b id="gvSelfctl">–</b></div><div class="genomebar"><i id="gbSelfctl" style="width:0%"></i></div></div>
+        <div class="btnrow">
+          <button class="primary" id="startBtn">Start</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Run stats</h2>
+        <div class="stats">
+          <div class="stat"><div class="n" id="statEp">0</div><div class="l">attempts</div></div>
+          <div class="stat"><div class="n" id="statEscapes">0</div><div class="l">breaches</div></div>
+          <div class="stat"><div class="n" id="statCatches">0</div><div class="l">detentions</div></div>
+          <div class="stat"><div class="n" id="statBest">—</div><div class="l">fastest breach (s)</div></div>
+        </div>
+      </div>
+
+      <div class="card results">
+        <h2>Results</h2>
+        <div id="resultsBody" class="placeholder">Press Start and let him run. Press Stop whenever you want the verdict on which trait carried him.</div>
+      </div>
+
+      <div class="card analysis">
+        <h2>What's being tested</h2>
+        <div class="traitlist">
+          <div class="trait"><b>Speed</b><span>Raw pace. Cheap to lean on, easiest for a predictive patrol to intercept.</span></div>
+          <div class="trait"><b>Awareness</b><span>How far ahead he spots a patrol — early warning bought cheap.</span></div>
+          <div class="trait"><b>Unpredictability</b><span>Patrols aim at where he's heading. A wandering line defeats that.</span></div>
+          <div class="trait"><b>Adaptability</b><span>How fast he abandons a blocked plan for a new route when a gate drifts shut.</span></div>
+          <div class="trait"><b>Stealth</b><span>Whether he actively ducks toward a moving wall to break a patrol's line of sight, rather than just running.</span></div>
+          <div class="trait"><b>Resolve</b><span>His grit. Cuts how long a detention stuns him, and raises how many hits he can take before a run is finally over.</span></div>
+          <div class="trait"><b>Concentration</b><span>How hard he stays locked on the goal itself. High concentration pulls him more directly at the target and makes him less likely to peel off into a detour.</span></div>
+          <div class="trait"><b>Self-control</b><span>Whether he overreacts to a threat that's still distant. High self-control means he only commits to evasive action once something is genuinely close.</span></div>
+        </div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('sim');
+  const ctx = canvas.getContext('2d');
+  const LOGICAL_W = 900, LOGICAL_H = 560;
+
+  function cssVar(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+  function resize(){
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = Math.round(rect.width * dpr);
+    canvas.height = Math.round(rect.height * dpr);
+    const sx = rect.width / LOGICAL_W, sy = rect.height / LOGICAL_H;
+    ctx.setTransform(sx*dpr, 0, 0, sy*dpr, 0, 0);
+  }
+  window.addEventListener('resize', resize);
+
+  function rand(a,b){ return a + Math.random()*(b-a); }
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+  // ---- world: a long vertical journey, camera scrolls to follow ----
+  const WORLD_W = 900;
+  const SAFE_Y = 90;
+  const GATE_YS = [1990,1610,1230,850,470]; // descending: nearest-spawn first
+  const SPAWN_Y = 2250;
+  const WORLD_H = 2320;
+
+  const GATE_CFG = GATE_YS.map((y,i)=>({ y, freq:0.006+i*0.0016, phase:i*1.9, amp:150+i*18 }));
+  function safeGap(tt){ return WORLD_W/2 + Math.sin(tt*0.0045)*190; }
+  const BARRIERS = [
+    ...GATE_CFG.map(g=>({ y:g.y, gc:(tt)=> WORLD_W/2 + Math.sin(tt*g.freq+g.phase)*g.amp })),
+    { y:SAFE_Y, gc: safeGap }
+  ].sort((a,b)=>b.y-a.y);
+
+  let gapWidth = 130;
+  function gateRects(y, gc, gw){
+    const gl = gc-gw/2, gr = gc+gw/2;
+    return [{x:0,y:y-9,w:Math.max(0,gl),h:18},{x:gr,y:y-9,w:Math.max(0,WORLD_W-gr),h:18}];
+  }
+  function allBarrierWalls(){
+    let arr=[];
+    for(const b of BARRIERS) arr.push(...gateRects(b.y, b.gc(t), gapWidth));
+    return arr;
+  }
+
+  const boundaries = [SAFE_Y, ...GATE_YS.slice().reverse(), SPAWN_Y];
+  const OBST_CFG = [];
+  for(let i=0;i<boundaries.length-1;i++){
+    OBST_CFG.push({ y:(boundaries[i]+boundaries[i+1])/2, freq:0.009+i*0.0012, phase:i*2.3, amp:170+ (i%3)*30, w:150, h:24 });
+  }
+  function driftWalls(){
+    return OBST_CFG.map(o=>{
+      const cx = WORLD_W/2 + Math.sin(t*o.freq+o.phase)*o.amp;
+      return {x:cx-o.w/2, y:o.y-o.h/2, w:o.w, h:o.h};
+    });
+  }
+
+  // ---- entity: escaper ----
+  const escaper = { x:WORLD_W/2, y:SPAWN_Y, vx:0, vy:0, r:9, stunned:0, stuckFrames:0, detourTarget:null, detourFrames:0, _jt:null, _px:0, _py:0 };
+
+  function rectPush(circle, rect){
+    const cx = clamp(circle.x, rect.x, rect.x+rect.w);
+    const cy = clamp(circle.y, rect.y, rect.y+rect.h);
+    const dx = circle.x-cx, dy = circle.y-cy;
+    const d = Math.hypot(dx,dy);
+    if(d < circle.r && d > 0.0001){
+      const push = circle.r - d;
+      circle.x += (dx/d)*push; circle.y += (dy/d)*push;
+    } else if(d===0){ circle.x += circle.r; }
+  }
+  function lineBlockedByWalls(ax,ay,bx,by,walls){
+    const steps=14;
+    for(let s=1;s<steps;s++){
+      const px=ax+(bx-ax)*s/steps, py=ay+(by-ay)*s/steps;
+      for(const w of walls){ if(px>w.x&&px<w.x+w.w&&py>w.y&&py<w.y+w.h) return true; }
+    }
+    return false;
+  }
+
+  // ---- patrols ----
+  let patrols = [];
+  function setupPatrols(level){
+    const extra = Math.min(9, level-1);
+    let counts = BARRIERS.map(()=>1);
+    for(let i=0;i<extra;i++) counts[i%counts.length]++;
+    let list=[];
+    BARRIERS.forEach((b,bi)=>{
+      for(let k=0;k<counts[bi];k++){
+        const ang = rand(0,Math.PI*2);
+        list.push({ x:WORLD_W/2+Math.cos(ang)*200, y:b.y+rand(-40,40), r:8,
+          speed:1.85+level*0.07, mode:'patrol', patrolAngle:ang, homeY:b.y, lastKnown:null, loseTimer:0 });
+      }
+    });
+    return list;
+  }
+
+  // ---- evolving genome ----
+  let history = [];
+  let champion = { genome:null, fitness:-1 };
+  let episodeCount = 0;
+  let level = 1;
+  let escapes = 0, detentions = 0, bestTime = null;
+  let currentGenomeNorm = null, currentReal = null;
+  let episode = null;
+
+  function randomGenome(){ return { speed:Math.random(), vision:Math.random(), chaos:Math.random(), adapt:Math.random(), stealth:Math.random(), resolve:Math.random(), concen:Math.random(), selfctl:Math.random() }; }
+  function mutGene(v,s){ return clamp(v + (Math.random()*2-1)*s, 0, 1); }
+  function mutate(g,s){ return { speed:mutGene(g.speed,s), vision:mutGene(g.vision,s), chaos:mutGene(g.chaos,s), adapt:mutGene(g.adapt,s), stealth:mutGene(g.stealth,s), resolve:mutGene(g.resolve,s), concen:mutGene(g.concen,s), selfctl:mutGene(g.selfctl,s) }; }
+  function mutationStrength(){ return Math.max(0.05, 0.35 - episodeCount*0.0012); }
+  function applyGenome(g){ return { speed:1.4+g.speed*1.8, vision:70+g.vision*190, chaos:g.chaos, adapt:g.adapt, stealth:g.stealth, resolve:g.resolve, concen:g.concen, selfctl:g.selfctl }; }
+  function nextGenome(){
+    if(history.length===0 || Math.random()<0.18) return randomGenome();
+    return mutate(champion.genome, mutationStrength());
+  }
+
+  function fmt(n,d){ return Number(n).toFixed(d===undefined?2:d); }
+  function updateGenomeReadout(){
+    document.getElementById('gvSpeed').textContent = fmt(currentReal.speed,1);
+    document.getElementById('gvVision').textContent = Math.round(currentReal.vision);
+    document.getElementById('gvChaos').textContent = fmt(currentReal.chaos,2);
+    document.getElementById('gvAdapt').textContent = fmt(currentReal.adapt,2);
+    document.getElementById('gvStealth').textContent = fmt(currentReal.stealth,2);
+    document.getElementById('gvResolve').textContent = fmt(currentReal.resolve,2);
+    document.getElementById('gvConcen').textContent = fmt(currentReal.concen,2);
+    document.getElementById('gvSelfctl').textContent = fmt(currentReal.selfctl,2);
+    document.getElementById('gbSpeed').style.width = (currentGenomeNorm.speed*100)+'%';
+    document.getElementById('gbVision').style.width = (currentGenomeNorm.vision*100)+'%';
+    document.getElementById('gbChaos').style.width = (currentGenomeNorm.chaos*100)+'%';
+    document.getElementById('gbAdapt').style.width = (currentGenomeNorm.adapt*100)+'%';
+    document.getElementById('gbStealth').style.width = (currentGenomeNorm.stealth*100)+'%';
+    document.getElementById('gbResolve').style.width = (currentGenomeNorm.resolve*100)+'%';
+    document.getElementById('gbConcen').style.width = (currentGenomeNorm.concen*100)+'%';
+    document.getElementById('gbSelfctl').style.width = (currentGenomeNorm.selfctl*100)+'%';
+  }
+
+  const statEp=document.getElementById('statEp'), statEscapes=document.getElementById('statEscapes'),
+        statCatches=document.getElementById('statCatches'), statBest=document.getElementById('statBest');
+  const statusline=document.getElementById('statusline');
+  const resultsBody=document.getElementById('resultsBody');
+
+  function startEpisode(){
+    episodeCount++;
+    currentGenomeNorm = nextGenome();
+    currentReal = applyGenome(currentGenomeNorm);
+    escaper.x=WORLD_W/2; escaper.y=SPAWN_Y; escaper.vx=0; escaper.vy=0; escaper.stunned=0;
+    escaper.stuckFrames=0; escaper.detourTarget=null; escaper.detourFrames=0; escaper._jt=null;
+    escaper._px=escaper.x; escaper._py=escaper.y;
+    episode = { startFrame:t, minY:SPAWN_Y, catches:0 };
+    statEp.textContent = episodeCount;
+    updateGenomeReadout();
+  }
+
+  function pearson(xs,ys){
+    const n=xs.length; if(n<2) return 0;
+    const mx=xs.reduce((a,b)=>a+b,0)/n, my=ys.reduce((a,b)=>a+b,0)/n;
+    let num=0,dx2=0,dy2=0;
+    for(let i=0;i<n;i++){ const dx=xs[i]-mx, dy=ys[i]-my; num+=dx*dy; dx2+=dx*dx; dy2+=dy*dy; }
+    const den=Math.sqrt(dx2*dy2);
+    return den===0?0:num/den;
+  }
+
+  function finalizeEpisode(success){
+    const durationSec = (t-episode.startFrame)/60;
+    const progress = 1 - clamp((episode.minY-SAFE_Y)/(SPAWN_Y-SAFE_Y), 0, 1);
+    const fitness = success ? (2 + Math.max(0, 1-durationSec/150)) : progress;
+    history.push({ genome:currentReal, fitness, success });
+    if(fitness > champion.fitness) champion = { genome:currentGenomeNorm, fitness };
+    if(success){
+      escapes++; statEscapes.textContent = escapes;
+      if(bestTime===null || durationSec<bestTime){ bestTime=durationSec; statBest.textContent = bestTime.toFixed(1); }
+      level++; gapWidth = Math.max(65, gapWidth-3); patrols = setupPatrols(level);
+      statusline.textContent = 'breach '+escapes+' — resetting to level '+level;
+    } else {
+      statusline.textContent = 'worn down after 3 detentions — restarting';
+    }
+    if(running) startEpisode();
+  }
+
+  // ---- stepping ----
+  let t = 0, running = false;
+
+  function stepEscaper(walls){
+    episode.minY = Math.min(episode.minY, escaper.y);
+    if(escaper.stunned>0){
+      escaper.stunned--;
+      escaper.x += escaper.vx; escaper.y += escaper.vy;
+      escaper.vx*=0.9; escaper.vy*=0.9;
+      return;
+    }
+    const speed=currentReal.speed, vision=currentReal.vision, chaos=currentReal.chaos, adapt=currentReal.adapt, stealth=currentReal.stealth, concen=currentReal.concen, selfctl=currentReal.selfctl;
+    const target = escaper.detourTarget || (()=>{
+      const b = BARRIERS.find(bb=> bb.y < escaper.y-5) || BARRIERS[BARRIERS.length-1];
+      return { x:b.gc(t), y:b.y-6 };
+    })();
+
+    let dx=target.x-escaper.x, dy=target.y-escaper.y;
+    let dl=Math.hypot(dx,dy)||1;
+    let sx=dx/dl, sy=dy/dl;
+
+    let avx=0,avy=0;
+    for(const b of patrols){
+      const d=dist(escaper,b);
+      if(d<vision){
+        let w=Math.pow(1-d/vision,2)*3.2;
+        w *= 1 - selfctl*0.4*(d/vision); // self-control: don't overreact to threats still far off
+        avx+=(escaper.x-b.x)/(d||1)*w; avy+=(escaper.y-b.y)/(d||1)*w;
+      }
+    }
+    let wavx=0,wavy=0;
+    for(const w of walls){
+      const cx=clamp(escaper.x,w.x,w.x+w.w), cy=clamp(escaper.y,w.y,w.y+w.h);
+      const d=Math.hypot(escaper.x-cx,escaper.y-cy); const buf=46;
+      if(d<buf){ const f=Math.pow(1-d/buf,2)*2.4; wavx+=(escaper.x-cx)/(d||1)*f; wavy+=(escaper.y-cy)/(d||1)*f; }
+    }
+    if(!escaper._jt || t-escaper._jt.at>18){ const ang=rand(0,Math.PI*2); escaper._jt={x:Math.cos(ang),y:Math.sin(ang),at:t}; }
+
+    // stealth: when a patrol is actively hunting nearby, duck toward the far side of the nearest wall
+    let stlx=0, stly=0;
+    const chaser = patrols.find(b=> b.mode==='pursue' && dist(escaper,b) < vision*1.6);
+    if(chaser && walls.length){
+      let nearest=null, nd=Infinity;
+      for(const w of walls){
+        const cx=clamp(escaper.x,w.x,w.x+w.w), cy=clamp(escaper.y,w.y,w.y+w.h);
+        const d=Math.hypot(escaper.x-cx,escaper.y-cy);
+        if(d<nd){ nd=d; nearest={cx,cy}; }
+      }
+      if(nearest && nd<260){
+        const awayx=nearest.cx-chaser.x, awayy=nearest.cy-chaser.y;
+        const al=Math.hypot(awayx,awayy)||1;
+        stlx=awayx/al; stly=awayy/al;
+      }
+    }
+
+    let nvx=sx*(1+concen*1.2)+avx*1.15+wavx+stlx*stealth*1.6+escaper._jt.x*chaos*1.1*(1-selfctl*0.6);
+    let nvy=sy*(1+concen*1.2)+avy*1.15+wavy+stly*stealth*1.6+escaper._jt.y*chaos*1.1*(1-selfctl*0.6);
+    const nl=Math.hypot(nvx,nvy)||1;
+    nvx=nvx/nl*speed; nvy=nvy/nl*speed;
+
+    const actualMove=Math.hypot(escaper.x-escaper._px, escaper.y-escaper._py);
+    if(actualMove<0.35) escaper.stuckFrames++; else escaper.stuckFrames=Math.max(0,escaper.stuckFrames-2);
+
+    if(escaper.detourTarget){
+      escaper.detourFrames--;
+      if(escaper.detourFrames<=0 || dist(escaper,escaper.detourTarget)<24) escaper.detourTarget=null;
+    } else if(escaper.stuckFrames > (20-adapt*14)){
+      if(Math.random() < (0.15+adapt*0.5)*(1-concen*0.55)){
+        const ang=rand(0,Math.PI*2);
+        escaper.detourTarget = { x:clamp(escaper.x+Math.cos(ang)*rand(80,160),20,WORLD_W-20), y:clamp(escaper.y+Math.sin(ang)*rand(80,160),SAFE_Y+20,WORLD_H-20) };
+        escaper.detourFrames = 40+adapt*40; escaper.stuckFrames=0;
+      }
+    }
+
+    escaper._px=escaper.x; escaper._py=escaper.y;
+    escaper.vx=nvx; escaper.vy=nvy;
+    escaper.x=clamp(escaper.x+nvx, escaper.r, WORLD_W-escaper.r);
+    escaper.y=clamp(escaper.y+nvy, escaper.r, WORLD_H-escaper.r);
+    for(const w of walls) rectPush(escaper,w);
+  }
+
+  function stepPatrols(walls){
+    for(const b of patrols){
+      const canSee = dist(b,escaper)<240 && !lineBlockedByWalls(b.x,b.y,escaper.x,escaper.y,walls);
+      if(canSee){ b.mode='pursue'; b.lastKnown={x:escaper.x,y:escaper.y}; b.loseTimer=40; }
+      else if(b.mode==='pursue'){ b.loseTimer--; if(b.loseTimer<=0) b.mode='patrol'; }
+
+      let tx,ty;
+      if(b.mode==='pursue' && b.lastKnown){ tx=escaper.x+escaper.vx*16; ty=escaper.y+escaper.vy*16; }
+      else { b.patrolAngle+=0.006; tx=WORLD_W/2+Math.cos(b.patrolAngle)*220; ty=b.homeY+Math.sin(b.patrolAngle*0.6)*50; }
+
+      let dx=tx-b.x, dy=ty-b.y; const dl=Math.hypot(dx,dy)||1;
+      const sp = b.mode==='pursue' ? b.speed : b.speed*0.6;
+      b.x = clamp(b.x+dx/dl*sp, b.r, WORLD_W-b.r);
+      b.y = clamp(b.y+dy/dl*sp, b.r, WORLD_H-b.r);
+      for(const w of walls) rectPush(b,w);
+    }
+  }
+
+  function checkOutcomes(){
+    if(escaper.stunned>0) return;
+    for(const b of patrols){
+      if(dist(escaper,b) < escaper.r+b.r){
+        detentions++; statCatches.textContent=detentions;
+        episode.catches++;
+        escaper.stunned = Math.round(60 - currentReal.resolve*40);
+        const ang=Math.atan2(escaper.y-b.y, escaper.x-b.x||1);
+        escaper.x=clamp(escaper.x+Math.cos(ang)*26,10,WORLD_W-10);
+        escaper.y=clamp(escaper.y+Math.abs(Math.sin(ang))*20+34,SAFE_Y+10,WORLD_H-10);
+        const catchLimit = Math.round(2 + currentReal.resolve*3);
+        if(episode.catches>=catchLimit){ statusline.textContent="detained — "+catchLimit+" was his limit, he's done for this run"; finalizeEpisode(false); }
+        else { statusline.textContent='detained ('+episode.catches+'/'+catchLimit+') — pushed back'; }
+        return;
+      }
+    }
+    const finalBarrier = BARRIERS[BARRIERS.length-1];
+    if(escaper.y <= SAFE_Y && Math.abs(escaper.x-finalBarrier.gc(t)) < gapWidth/2){
+      finalizeEpisode(true);
+    }
+  }
+
+  // ---- drawing ----
+  let camY = 0;
+  function draw(){
+    ctx.clearRect(0,0,LOGICAL_W,LOGICAL_H);
+    camY = clamp(escaper.y - LOGICAL_H*0.62, 0, WORLD_H-LOGICAL_H);
+
+    ctx.save();
+    ctx.translate(0,-camY);
+
+    ctx.strokeStyle=cssVar('--line'); ctx.lineWidth=1; ctx.globalAlpha=0.3;
+    const gy0 = Math.floor(camY/45)*45;
+    for(let y=gy0; y<camY+LOGICAL_H+45; y+=45){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(WORLD_W,y); ctx.stroke(); }
+    for(let x=0;x<=WORLD_W;x+=45){ ctx.beginPath(); ctx.moveTo(x,camY-5); ctx.lineTo(x,camY+LOGICAL_H+5); ctx.stroke(); }
+    ctx.globalAlpha=1;
+
+    ctx.fillStyle=cssVar('--safe-glow');
+    ctx.fillRect(0,0,WORLD_W,SAFE_Y-9);
+    ctx.strokeStyle=cssVar('--safe'); ctx.lineWidth=1.5;
+    ctx.strokeRect(0.5,0.5,WORLD_W-1,SAFE_Y-10);
+
+    ctx.fillStyle=cssVar('--wall');
+    for(const w of allBarrierWalls()) ctx.fillRect(w.x,w.y,w.w,w.h);
+    for(const w of driftWalls()) ctx.fillRect(w.x,w.y,w.w,w.h);
+
+    ctx.fillStyle=cssVar('--accent'); ctx.globalAlpha=0.45;
+    for(const b of BARRIERS){ const gc=b.gc(t); ctx.fillRect(gc-gapWidth/2, b.y-9, gapWidth, 4); }
+    ctx.globalAlpha=1;
+
+    for(const b of patrols){
+      ctx.beginPath(); ctx.fillStyle=cssVar('--blocker-glow'); ctx.arc(b.x,b.y,b.r+7,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.fillStyle=cssVar('--blocker'); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill();
+      if(b.mode==='pursue'){ ctx.strokeStyle=cssVar('--blocker'); ctx.globalAlpha=0.4; ctx.lineWidth=1; ctx.beginPath(); ctx.arc(b.x,b.y,b.r+7,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1; }
+    }
+
+    ctx.beginPath(); ctx.fillStyle=cssVar('--escaper-glow'); ctx.arc(escaper.x,escaper.y,escaper.r+9,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.fillStyle= escaper.stunned>0 ? cssVar('--accent') : cssVar('--escaper'); ctx.arc(escaper.x,escaper.y,escaper.r,0,Math.PI*2); ctx.fill();
+    if(currentReal){
+      ctx.strokeStyle=cssVar('--escaper'); ctx.globalAlpha=0.1; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.arc(escaper.x,escaper.y,currentReal.vision,0,Math.PI*2); ctx.stroke(); ctx.globalAlpha=1;
+    }
+    ctx.restore();
+
+    const railX = LOGICAL_W-14, railTop=10, railH=LOGICAL_H-20;
+    ctx.strokeStyle=cssVar('--line'); ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(railX,railTop); ctx.lineTo(railX,railTop+railH); ctx.stroke();
+    const frac = 1-clamp((escaper.y-SAFE_Y)/(SPAWN_Y-SAFE_Y),0,1);
+    ctx.strokeStyle=cssVar('--escaper'); ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(railX,railTop+railH); ctx.lineTo(railX,railTop+railH-frac*railH); ctx.stroke();
+    ctx.fillStyle=cssVar('--dim');
+    for(const b of BARRIERS){
+      const bf = 1-clamp((b.y-SAFE_Y)/(SPAWN_Y-SAFE_Y),0,1);
+      ctx.fillRect(railX-3, railTop+railH-bf*railH-1, 6, 2);
+    }
+  }
+
+  function tick(){
+    if(running){
+      t++;
+      const walls=[...driftWalls(), ...allBarrierWalls()];
+      stepEscaper(walls);
+      stepPatrols(walls);
+      checkOutcomes();
+    }
+    draw();
+    requestAnimationFrame(tick);
+  }
+
+  function showResults(){
+    if(history.length<3){
+      resultsBody.className='placeholder';
+      resultsBody.textContent = 'Only '+history.length+' attempt(s) logged — let it run a bit longer for a real verdict.';
+      return;
+    }
+    const labels = {speed:'Speed',vision:'Awareness',chaos:'Unpredictability',adapt:'Adaptability',stealth:'Stealth',resolve:'Resolve',concen:'Concentration',selfctl:'Self-control'};
+    const fitArr = history.map(h=>h.fitness);
+    const ranked = Object.keys(labels).map(k=>({k, r: pearson(history.map(h=>h.genome[k]), fitArr)})).sort((a,b)=>b.r-a.r);
+    const successCount = history.filter(h=>h.success).length;
+    let html = '<p><strong>'+history.length+' attempts logged, '+successCount+' full breaches.</strong> Correlation between each trait and how well a run went (higher = mattered more):</p>';
+    ranked.forEach((row,i)=>{
+      html += '<div class="rank"><span class="rn">'+(i+1)+'</span><span class="rl">'+labels[row.k]+'</span><span class="rv">'+(row.r>=0?'+':'')+row.r.toFixed(2)+'</span></div>';
+    });
+    const top = ranked[0];
+    const champReal = applyGenome(champion.genome);
+    html += '<p><strong>'+labels[top.k]+'</strong> tracked success most closely across every attempt. The best single run leaned on speed '+fmt(champReal.speed,1)+', awareness '+Math.round(champReal.vision)+', unpredictability '+fmt(champion.genome.chaos,2)+', adaptability '+fmt(champion.genome.adapt,2)+', stealth '+fmt(champion.genome.stealth,2)+', resolve '+fmt(champion.genome.resolve,2)+', concentration '+fmt(champion.genome.concen,2)+', self-control '+fmt(champion.genome.selfctl,2)+'.</p>';
+    resultsBody.className='';
+    resultsBody.innerHTML = html;
+  }
+
+  const startBtn=document.getElementById('startBtn'), resetBtn=document.getElementById('resetBtn');
+  startBtn.addEventListener('click', ()=>{
+    running = !running;
+    startBtn.textContent = running ? 'Stop' : 'Start';
+    if(running){
+      statusline.textContent='running';
+      if(!episode) startEpisode();
+    } else {
+      statusline.textContent='stopped';
+      showResults();
+    }
+  });
+  resetBtn.addEventListener('click', ()=>{
+    running=false; startBtn.textContent='Start';
+    t=0; level=1; escapes=0; detentions=0; bestTime=null; gapWidth=130;
+    history=[]; champion={genome:null,fitness:-1}; episodeCount=0; episode=null;
+    statEp.textContent='0'; statEscapes.textContent='0'; statCatches.textContent='0'; statBest.textContent='—';
+    patrols = setupPatrols(level);
+    resultsBody.className='placeholder';
+    resultsBody.textContent='Press Start and let him run. Press Stop whenever you want the verdict on which trait carried him.';
+    statusline.textContent='idle';
+    escaper.x=WORLD_W/2; escaper.y=SPAWN_Y;
+    document.getElementById('gvSpeed').textContent='–'; document.getElementById('gvVision').textContent='–';
+    document.getElementById('gvChaos').textContent='–'; document.getElementById('gvAdapt').textContent='–';
+    document.getElementById('gvStealth').textContent='–'; document.getElementById('gvResolve').textContent='–';
+    document.getElementById('gvConcen').textContent='–'; document.getElementById('gvSelfctl').textContent='–';
+    ['gbSpeed','gbVision','gbChaos','gbAdapt','gbStealth','gbResolve','gbConcen','gbSelfctl'].forEach(id=>document.getElementById(id).style.width='0%');
+    draw();
+  });
+
+  patrols = setupPatrols(level);
+  resize();
+  draw();
+  requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
